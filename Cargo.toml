@@ -1,0 +1,10 @@
+[package]
+name       = "rust-ecs"
+version    = "0.1.0"
+edition    = "2021"
+authors    = ["DUPONT Victor <dupnt.victor@gmail.com>"]
+repository = "https://github.com/drownedNonsense/rust-ecs"
+license    = "GPL-3.0-or-later"
+readme     = "README.md"
+
+[dependencies]
