@@ -19,7 +19,7 @@
     pub struct World<B: BitMask> {
         components: Vec<TypeId>,
         component_columns: HashMap<B, Box<dyn ComponentColumn>>,
-        static_components: HashMap<TypeId, Box<dyn ComponentCell>>,
+        static_components: HashMap<u8, Box<dyn ComponentCell>>,
         entities: HashMap<Entity, B>,
         next_entity_id: EntityId,
     } // struct World
@@ -29,7 +29,7 @@
         components: Vec<TypeId>,
         component_count: usize,
         component_columns: HashMap<B, Box<dyn ComponentColumn>>,
-        static_components: HashMap<TypeId, Box<dyn ComponentCell>>,
+        static_components: HashMap<u8, Box<dyn ComponentCell>>,
     } // struct WorldBuilder
 
 
@@ -41,7 +41,7 @@
         fn new(
             components: Vec<TypeId>,
             component_columns: HashMap<B, Box<dyn ComponentColumn>>,
-            static_components: HashMap<TypeId, Box<dyn ComponentCell>>
+            static_components: HashMap<u8, Box<dyn ComponentCell>>
         ) -> Self {
             World { components, component_columns, static_components, entities: HashMap::new(), next_entity_id: 0 }
         } // fn new'
@@ -94,9 +94,9 @@
         } // fn get_component_column()
 
 
-        pub fn get_static_component<C: Component>(&self) -> &Rc<RefCell<C>> {
+        pub fn get_static_component<C: Component>(&self, id: u8) -> &Rc<RefCell<C>> {
             self.static_components
-                .get(&TypeId::of::<C>())
+                .get(&id)
                 .expect("Attempted to find a static component that was not registered!")
                 .as_any()
                 .downcast_ref::<Rc<RefCell<C>>>()
@@ -151,20 +151,20 @@
         } // fn new()
 
 
-        pub fn with_empty_static_component<C: Component + Default>(mut self) -> Self {
-            match self.static_components.contains_key(&TypeId::of::<C>()) {
+        pub fn with_empty_static_component<C: Component + Default>(mut self, id: u8) -> Self {
+            match self.static_components.contains_key(&id) {
                 true =>  { println!("The static component no.{} has been discarded as it was already registered!", self.static_components.len() ) },
-                false => { self.static_components.insert(TypeId::of::<C>(), Box::new(Rc::new(RefCell::new(C::default())))); },
+                false => { self.static_components.insert(id, Box::new(Rc::new(RefCell::new(C::default())))); },
             } // match ..
 
             self
         } // fn with_empty_static_component()
 
 
-        pub fn with_static_component<C: Component>(mut self, component: C) -> Self {
-            match self.static_components.contains_key(&TypeId::of::<C>()) {
+        pub fn with_static_component<C: Component>(mut self, component: C, id: u8) -> Self {
+            match self.static_components.contains_key(&id) {
                 true =>  { println!("The static component no.{} has been discarded as it was already registered!", self.static_components.len() ) },
-                false => { self.static_components.insert(TypeId::of::<C>(), Box::new(Rc::new(RefCell::new(component)))); },
+                false => { self.static_components.insert(id, Box::new(Rc::new(RefCell::new(component)))); },
             } // match ..
 
             self
