@@ -171,6 +171,16 @@
         } // fn with_static_component()
 
 
+        pub fn with_shared_static_component<C: Component>(mut self, id: S, component: &Rc<RefCell<C>>) -> Self {
+            match self.static_components.contains_key(&id) {
+                true =>  { println!("The static component no.{} has been discarded as it was already registered!", self.static_components.len() ) },
+                false => { self.static_components.insert(id, Box::new(component.clone())); },
+            } // match ..
+
+            self
+        } // fn with_static_component()
+
+
         pub fn with_component<C: Component>(mut self) -> Self {
             match self.components.contains(&TypeId::of::<C>()) {
                 true =>  { println!("The component no.{} has been discarded as it was already registered!", self.component_count ) },
