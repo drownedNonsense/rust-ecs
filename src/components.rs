@@ -45,6 +45,14 @@
         + BitXor<Rhs, Output=Output> + BitXorAssign
         { fn bit_mask(index: usize) -> Self; }
 
+    pub trait StaticComponentId:
+        'static
+        + Sized
+        + Eq
+        + Hash
+        + Default
+        + Clone + Copy {}
+
 
 //###############################
 // I M P L E M E N T A T I O N S

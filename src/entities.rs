@@ -4,9 +4,10 @@
 
     use std::rc::Rc;
     use std::cell::RefCell;
+    use std::hash::Hash;
 
     use crate::worlds::World;
-    use crate::components::{Component, BitMask};
+    use crate::components::{Component, BitMask, StaticComponentId};
 
 
 //#######################
@@ -17,10 +18,10 @@
     pub struct Entity(EntityId);
 
 
-    pub struct EntityBuilder<'world, B: BitMask> {
+    pub struct EntityBuilder<'world, B: BitMask, S: StaticComponentId> {
         entity: Entity,
         bit_mask: B,
-        world: &'world mut World<B>,
+        world: &'world mut World<B, S>,
     } // struct EntityBuilder
 
 
@@ -31,8 +32,8 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitMask> EntityBuilder<'world, B> {
-        pub(crate) fn new(id: EntityId, world: &'world mut World<B>) -> Self {
+    impl<'world, B: BitMask, S: StaticComponentId> EntityBuilder<'world, B, S> {
+        pub(crate) fn new(id: EntityId, world: &'world mut World<B, S>) -> Self {
             EntityBuilder { entity: Entity(id), bit_mask: B::default(), world }
         } // fn new()
 

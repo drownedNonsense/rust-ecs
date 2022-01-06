@@ -7,7 +7,7 @@
     use std::rc::Rc;
     use std::cell::RefCell;
 
-    use crate::components::{Component, ComponentCell, ComponentColumn, BitMask};
+    use crate::components::{Component, ComponentCell, ComponentColumn, BitMask, StaticComponentId};
     use crate::entities::{Entity, EntityBuilder, EntityId};
     use crate::queries::QueryBuilder;
 
@@ -16,20 +16,20 @@
 // D E F I N I T I O N S
 //#######################
 
-    pub struct World<B: BitMask> {
+    pub struct World<B: BitMask, S: StaticComponentId> {
         components: Vec<TypeId>,
         component_columns: HashMap<B, Box<dyn ComponentColumn>>,
-        static_components: HashMap<u8, Box<dyn ComponentCell>>,
+        static_components: HashMap<S, Box<dyn ComponentCell>>,
         entities: HashMap<Entity, B>,
         next_entity_id: EntityId,
     } // struct World
 
 
-    pub struct WorldBuilder<B: BitMask> {
+    pub struct WorldBuilder<B: BitMask, S: StaticComponentId> {
         components: Vec<TypeId>,
         component_count: usize,
         component_columns: HashMap<B, Box<dyn ComponentColumn>>,
-        static_components: HashMap<u8, Box<dyn ComponentCell>>,
+        static_components: HashMap<S, Box<dyn ComponentCell>>,
     } // struct WorldBuilder
 
 
@@ -37,18 +37,18 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<B: BitMask> World<B> {
+    impl<B: BitMask, S: StaticComponentId> World<B, S> {
         fn new(
             components: Vec<TypeId>,
             component_columns: HashMap<B, Box<dyn ComponentColumn>>,
-            static_components: HashMap<u8, Box<dyn ComponentCell>>
+            static_components: HashMap<S, Box<dyn ComponentCell>>
         ) -> Self {
             World { components, component_columns, static_components, entities: HashMap::new(), next_entity_id: 0 }
         } // fn new'
 
 
-        pub fn builder() -> WorldBuilder<B> {
-            WorldBuilder::<B>::new()
+        pub fn builder() -> WorldBuilder<B, S> {
+            WorldBuilder::<B, S>::new()
         } // fn builder()
 
 
@@ -94,7 +94,7 @@
         } // fn get_component_column()
 
 
-        pub fn get_static_component<C: Component>(&self, id: u8) -> &Rc<RefCell<C>> {
+        pub fn get_static_component<C: Component>(&self, id: S) -> &Rc<RefCell<C>> {
             self.static_components
                 .get(&id)
                 .expect("Attempted to find a static component that was not registered!")
@@ -128,19 +128,19 @@
         } // fn delete_entity()
 
 
-        pub fn new_entity(&mut self) -> EntityBuilder<B> {
+        pub fn new_entity(&mut self) -> EntityBuilder<B, S> {
             self.next_entity_id += 1;
             EntityBuilder::new(self.next_entity_id - 1, self)
         } // fn new_entity()
 
 
-        pub fn new_query(&self) -> QueryBuilder<B> {
+        pub fn new_query(&self) -> QueryBuilder<B, S> {
             QueryBuilder::new(self)
         } // fn new_query()
     } // impl World
 
 
-    impl<B: BitMask> WorldBuilder<B> {
+    impl<B: BitMask, S: StaticComponentId> WorldBuilder<B, S> {
         fn new() -> Self {
             WorldBuilder {
                 components: Vec::new(),
@@ -151,7 +151,7 @@
         } // fn new()
 
 
-        pub fn with_empty_static_component<C: Component + Default>(mut self, id: u8) -> Self {
+        pub fn with_empty_static_component<C: Component + Default>(mut self, id: S) -> Self {
             match self.static_components.contains_key(&id) {
                 true =>  { println!("The static component no.{} has been discarded as it was already registered!", self.static_components.len() ) },
                 false => { self.static_components.insert(id, Box::new(Rc::new(RefCell::new(C::default())))); },
@@ -161,7 +161,7 @@
         } // fn with_empty_static_component()
 
 
-        pub fn with_static_component<C: Component>(mut self, component: C, id: u8) -> Self {
+        pub fn with_static_component<C: Component>(mut self, component: C, id: S) -> Self {
             match self.static_components.contains_key(&id) {
                 true =>  { println!("The static component no.{} has been discarded as it was already registered!", self.static_components.len() ) },
                 false => { self.static_components.insert(id, Box::new(Rc::new(RefCell::new(component)))); },
@@ -185,7 +185,7 @@
         } // fn with_component()
 
 
-        pub fn build(self) -> World<B> {
+        pub fn build(self) -> World<B, S> {
             World::new(self.components, self.component_columns, self.static_components)
         } // fn build()
     } // impl WorldBuilder

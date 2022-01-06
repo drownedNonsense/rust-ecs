@@ -6,7 +6,7 @@
     use std::cell::RefCell;
 
     use crate::worlds::World;
-    use crate::components::{Component, BitMask};
+    use crate::components::{Component, BitMask, StaticComponentId};
     use crate::entities::Entity;
 
 
@@ -14,14 +14,14 @@
 // D E F I N I T I O N S
 //#######################
 
-    pub struct Query<'world, B: BitMask> {
+    pub struct Query<'world, B: BitMask, S: StaticComponentId> {
         entities: Vec<Entity>,
-        world: &'world World<B>,
+        world: &'world World<B, S>,
     } // struct Query
 
-    pub struct QueryBuilder<'world, B: BitMask> {
+    pub struct QueryBuilder<'world, B: BitMask, S: StaticComponentId> {
         bit_mask: B,
-        world: &'world World<B>,
+        world: &'world World<B, S>,
     } // struct EntityBuilder
 
 
@@ -29,8 +29,8 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitMask> Query<'world, B> {
-        fn new(entities: Vec<Entity>, world: &'world World<B>) -> Self {
+    impl<'world, B: BitMask, S: StaticComponentId> Query<'world, B, S> {
+        fn new(entities: Vec<Entity>, world: &'world World<B, S>) -> Self {
             Query { entities, world }
         } // fn new()
 
@@ -52,8 +52,8 @@
     } // impl Query
 
 
-    impl<'world, B: BitMask> QueryBuilder<'world, B> {
-        pub(crate) fn new(world: &'world World<B>) -> Self {
+    impl<'world, B: BitMask, S: StaticComponentId> QueryBuilder<'world, B, S> {
+        pub(crate) fn new(world: &'world World<B, S>) -> Self {
             QueryBuilder { bit_mask: B::default(), world }
         } // fn new()
 
@@ -64,7 +64,7 @@
         } // fn with_component()
 
 
-        pub fn build(self) -> Query<'world, B> {
+        pub fn build(self) -> Query<'world, B, S> {
             let entities = self.world.get_entities(self.bit_mask);
             Query::new(entities, &self.world)
         } // fn build()
