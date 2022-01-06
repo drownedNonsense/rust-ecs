@@ -50,7 +50,6 @@
         + Sized
         + Eq
         + Hash
-        + Default
         + Clone + Copy {}
 
 
