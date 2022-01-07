@@ -79,6 +79,12 @@
         } // fn add_component()
 
 
+        pub fn delete_entity_component<C: Component>(&mut self, entity: Entity) {
+            let bit_mask = self.component_bit_mask::<C>();
+            self.component_columns.get_mut(&bit_mask).unwrap().remove_entity(&entity);
+        } // fn delete_entity_component()
+
+
         pub(crate) fn add_entity(&mut self, entity: Entity, entity_bit_mask: B) {
             self.entities.insert(entity, entity_bit_mask);
         } // fn add_entity()
