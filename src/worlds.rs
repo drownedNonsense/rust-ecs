@@ -104,6 +104,12 @@
         } // fn get_static_component()
 
 
+        pub fn set_static_component<C: Component>(&mut self, id: S, component: C) {
+            self.static_components.remove(&id);
+            self.static_components.insert(id, Box::new(Rc::new(RefCell::new(component))));
+        } // fn get_static_component()
+
+
         pub(crate) fn get_entities(&self, bit_mask_filter: B) -> Vec<Entity> {
             self.entities
                 .iter()
