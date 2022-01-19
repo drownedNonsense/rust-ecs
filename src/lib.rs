@@ -4,5 +4,5 @@
 
     pub        mod worlds;
     pub(crate) mod queries;
-    pub(crate) mod entities;
+    pub        mod entities;
     pub        mod components;
