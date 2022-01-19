@@ -79,6 +79,18 @@
         } // fn add_component()
 
 
+        pub fn get_entity_component<C: Component>(&mut self, entity: Entity) -> &Rc<RefCell<C>> {
+            self.component_columns
+                .get(&self.component_bit_mask::<C>())
+                .expect("Attempted to find a component column that was not registered!")
+                .as_any()
+                .downcast_ref::<HashMap<Entity, Rc<RefCell<C>>>>()
+                .expect("Failed to downcast a component column!")
+                .get(&entity)
+                .expect("Attempted to find an entity component that was not registerd!")
+        } // fn get_entity_component()
+
+
         pub fn delete_entity_component<C: Component>(&mut self, entity: Entity) {
             let bit_mask = self.component_bit_mask::<C>();
             self.component_columns.get_mut(&bit_mask).unwrap().remove_entity(&entity);
