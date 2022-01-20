@@ -79,7 +79,7 @@
         } // fn add_component()
 
 
-        pub fn get_entity_component<C: Component>(&mut self, entity: Entity) -> &Rc<RefCell<C>> {
+        pub fn get_entity_component<C: Component>(&self, entity: Entity) -> &Rc<RefCell<C>> {
             self.component_columns
                 .get(&self.component_bit_mask::<C>())
                 .expect("Attempted to find a component column that was not registered!")
