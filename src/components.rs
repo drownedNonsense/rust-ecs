@@ -11,6 +11,7 @@
         BitAnd, BitAndAssign,
         BitOr,  BitOrAssign,
         BitXor, BitXorAssign,
+        Not,
     }; // use ..
 
     use crate::entities::Entity;
@@ -43,6 +44,7 @@
         + BitAnd<Rhs, Output=Output> + BitAndAssign
         + BitOr<Rhs, Output=Output> + BitOrAssign
         + BitXor<Rhs, Output=Output> + BitXorAssign
+        + Not<Output=Output>
         { fn bit_mask(index: usize) -> Self; }
 
     pub trait StaticComponentId:

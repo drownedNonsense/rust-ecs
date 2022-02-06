@@ -39,19 +39,19 @@
 
 
         pub fn with_empty_component<C: Component + Default>(mut self) -> Self {
-            self.world.add_component_to_entity(C::default(), self.entity, &mut self.bit_mask);
+            self.world.add_component_to_entity_builder(C::default(), self.entity, &mut self.bit_mask);
             self
         } // fn with_empty_component()
 
 
         pub fn with_component<C: Component>(mut self, component: C) -> Self {
-            self.world.add_component_to_entity(component, self.entity, &mut self.bit_mask);
+            self.world.add_component_to_entity_builder(component, self.entity, &mut self.bit_mask);
             self
         } // fn with_component()
 
 
         pub fn with_shared_component<C: Component>(mut self, component: &Rc<RefCell<C>>) -> Self {
-            self.world.add_shared_component_to_entity(component, self.entity, &mut self.bit_mask);
+            self.world.add_shared_component_to_entity_builder(component, self.entity, &mut self.bit_mask);
             self
         } // fn with_component()
 
