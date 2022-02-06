@@ -121,6 +121,27 @@
         } // fn add_empty_component_to_entity()
 
 
+        pub fn add_empty_component_to_entity_group<C: Component + Default>(&mut self, entity_group: &[Entity]) {
+            let bit_mask = self.component_bit_mask::<C>();
+            let component_column = self.component_columns
+                .get_mut(&bit_mask)
+                .expect("Attempted to find a component column that was not registered!")
+                .as_any_mut()
+                .downcast_mut::<HashMap<Entity, Rc<RefCell<C>>>>()
+                .expect("Failed to downcast a component column!");
+            entity_group
+                .iter()
+                .for_each(|entity| {
+
+                    component_column.insert(*entity, Rc::new(RefCell::new(C::default())));
+                    *self.entities
+                        .get_mut(entity)
+                        .expect("Attempted to find an entity that was not registered!") |= bit_mask;
+
+                }); // for_each()
+        } // fn add_empty_component_to_entity_group()
+
+
         pub fn add_shared_component_to_entity<C: Component>(&mut self, component: &Rc<RefCell<C>>, entity: Entity) {
             let bit_mask = self.component_bit_mask::<C>();
             *self.entities
@@ -134,6 +155,27 @@
                 .expect("Failed to downcast a component column!")
                 .insert(entity, component.clone());
         } // fn add_shared_component_to_entity()
+
+
+        pub fn add_shared_component_to_entity_group<C: Component>(&mut self, component: &Rc<RefCell<C>>, entity_group: &[Entity]) {
+            let bit_mask = self.component_bit_mask::<C>();
+            let component_column = self.component_columns
+                .get_mut(&bit_mask)
+                .expect("Attempted to find a component column that was not registered!")
+                .as_any_mut()
+                .downcast_mut::<HashMap<Entity, Rc<RefCell<C>>>>()
+                .expect("Failed to downcast a component column!");
+            entity_group
+                .iter()
+                .for_each(|entity| {
+
+                    component_column.insert(*entity, component.clone());
+                    *self.entities
+                        .get_mut(entity)
+                        .expect("Attempted to find an entity that was not registered!") |= bit_mask;
+
+                }); // for_each()
+        } // fn add_shared_component_to_entity_group()
 
 
         pub fn get_entity_component<C: Component>(&self, entity: Entity) -> Option<&Rc<RefCell<C>>> {
@@ -171,6 +213,27 @@
                 .unwrap()
                 .remove_entity(&entity);
         } // fn delete_entity_component()
+
+
+        pub fn delete_entity_group_component<C: Component>(&mut self, entity_group: &[Entity]) {
+            let bit_mask = self.component_bit_mask::<C>();
+            let component_column = self.component_columns
+                .get_mut(&bit_mask)
+                .expect("Attempted to find a component column that was not registered!")
+                .as_any_mut()
+                .downcast_mut::<HashMap<Entity, Rc<RefCell<C>>>>()
+                .expect("Failed to downcast a component column!");
+            entity_group
+                .iter()
+                .for_each(|entity| {
+
+                    component_column.remove_entity(entity);
+                    *self.entities
+                        .get_mut(entity)
+                        .expect("Attempted to find an entity that was not registered!") &= !bit_mask;
+
+                }); // for_each()
+        } // fn delete_entity_group_component()
 
 
         pub(crate) fn add_entity(&mut self, entity: Entity, entity_bit_mask: B) {
