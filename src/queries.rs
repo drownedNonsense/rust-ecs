@@ -46,18 +46,8 @@
         } // fn get_components()
 
 
-        pub fn try_get_components<C: Component>(&self) -> Vec<Option<&Rc<RefCell<C>>>> {
-            let component_column = self.world.get_component_column::<C>();
-            self.entities
-                .iter()
-                .map(|entity| component_column
-                    .get(entity))
-                .collect()
-        } // fn try_get_components()
-
-
-        pub fn get_entities(&self) -> &[Entity] {
-            &self.entities
+        pub fn get_entities(&self) -> Vec<Entity> {
+            self.entities.clone()
         } // fn get_entities()
     } // impl Query
 
