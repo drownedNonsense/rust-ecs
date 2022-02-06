@@ -91,6 +91,14 @@
         } // fn add_shared_component_to_entity_builder()
 
 
+        pub fn entity_has_component<C: Component>(&self, entity: Entity) -> bool {
+            let bit_mask = self.component_bit_mask::<C>();
+            *self.entities
+                .get(&entity)
+                .expect("Attempted to find an entity that was not registered!") & bit_mask == bit_mask
+        } // fn entity_has_component()
+
+
         pub fn add_component_to_entity<C: Component>(&mut self, component: C, entity: Entity) {
             let bit_mask = self.component_bit_mask::<C>();
             *self.entities
