@@ -6,22 +6,24 @@
     use std::cell::RefCell;
     use std::hash::Hash;
 
-    use crate::worlds::World;
-    use crate::components::{Component, BitMask, StaticComponentId};
+    use crate::worlds::{World, Flags, ComponentPointers};
+    use crate::components::Component;
+
+    use rust_utils::BitSequence;
 
 
 //#######################
 // D E F I N I T I O N S
 //#######################
 
-    #[derive(Hash, Clone, Copy, PartialEq, Eq)]
+    #[derive(Clone, Copy, Hash, PartialEq, Eq, Default, Debug)]
     pub struct Entity(EntityId);
 
 
-    pub struct EntityBuilder<'world, B: BitMask, S: StaticComponentId> {
-        entity: Entity,
+    pub struct EntityBuilder<'world, B: BitSequence, F: Flags, P: ComponentPointers> {
+        entity:   Entity,
         bit_mask: B,
-        world: &'world mut World<B, S>,
+        world:    &'world mut World<B, F, P>,
     } // struct EntityBuilder
 
 
@@ -32,32 +34,41 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitMask, S: StaticComponentId> EntityBuilder<'world, B, S> {
-        pub(crate) fn new(id: EntityId, world: &'world mut World<B, S>) -> Self {
-            EntityBuilder { entity: Entity(id), bit_mask: B::default(), world }
-        } // fn new()
-
-
-        pub fn with_empty_component<C: Component + Default>(mut self) -> Self {
-            self.world.add_component_to_entity_builder(C::default(), self.entity, &mut self.bit_mask);
-            self
-        } // fn with_empty_component()
+    impl<'world, B: BitSequence, F: Flags, P: ComponentPointers> EntityBuilder<'world, B, F, P> {
+        pub(crate) fn new(
+            id:    EntityId,
+            world: &'world mut World<B, F, P>
+        ) -> Self { EntityBuilder { entity: Entity(id), bit_mask: B::default(), world }}
 
 
         pub fn with_component<C: Component>(mut self, component: C) -> Self {
+
             self.world.add_component_to_entity_builder(component, self.entity, &mut self.bit_mask);
             self
+            
         } // fn with_component()
 
 
         pub fn with_shared_component<C: Component>(mut self, component: &Rc<RefCell<C>>) -> Self {
+
             self.world.add_shared_component_to_entity_builder(component, self.entity, &mut self.bit_mask);
             self
-        } // fn with_component()
+
+        } // fn with_shared_component()
+
+
+        pub fn with_flag(mut self, flag: F) -> Self {
+
+            self.world.add_flag_to_entity_builder(flag, &mut self.bit_mask);
+            self
+
+        } // fn with_flag()
 
 
         pub fn build(self) -> Entity {
+
             self.world.add_entity(self.entity, self.bit_mask);
             self.entity
+
         } // fn build()
     } // impl EntityBuilder ..

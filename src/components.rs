@@ -6,13 +6,6 @@
     use std::any::Any;
     use std::rc::Rc;
     use std::cell::RefCell;
-    use std::hash::Hash;
-    use std::ops::{
-        BitAnd, BitAndAssign,
-        BitOr,  BitOrAssign,
-        BitXor, BitXorAssign,
-        Not,
-    }; // use ..
 
     use crate::entities::Entity;
 
@@ -29,30 +22,11 @@
     pub(crate) trait ComponentColumn: Any {
         fn as_any(&self)         -> &dyn Any;
         fn as_any_mut(&mut self) -> &mut dyn Any;
-        fn remove_entity(&mut self, entity: &Entity);
+        fn remove_entity(&mut self, entity: Entity);
     } // trait ComponentColumn
 
 
-    pub trait Component: Any {}
-    pub trait BitMask<Rhs=Self, Output=Self>:
-        'static
-        + Sized
-        + Eq
-        + Hash
-        + Default
-        + Clone + Copy
-        + BitAnd<Rhs, Output=Output> + BitAndAssign
-        + BitOr<Rhs, Output=Output> + BitOrAssign
-        + BitXor<Rhs, Output=Output> + BitXorAssign
-        + Not<Output=Output>
-        { fn bit_mask(index: usize) -> Self; }
-
-    pub trait StaticComponentId:
-        'static
-        + Sized
-        + Eq
-        + Hash
-        + Clone + Copy {}
+    pub trait Component: Any + Clone {}
 
 
 //###############################
@@ -65,15 +39,7 @@
 
 
     impl<C: 'static + Component> ComponentColumn for HashMap<Entity, Rc<RefCell<C>>> {
-        fn as_any(&self)         -> &dyn Any         { self }
-        fn as_any_mut(&mut self) -> &mut dyn Any     { self }
-        fn remove_entity(&mut self, entity: &Entity) { self.remove(entity); }
+        fn as_any(&self)         -> &dyn Any        { self }
+        fn as_any_mut(&mut self) -> &mut dyn Any    { self }
+        fn remove_entity(&mut self, entity: Entity) { self.remove(&entity); }
     } // impl ComponentColumn ..
-
-
-    impl BitMask for u8    { fn bit_mask(index: usize) -> Self { 1u8    << index }}
-    impl BitMask for u16   { fn bit_mask(index: usize) -> Self { 1u16   << index }}
-    impl BitMask for u32   { fn bit_mask(index: usize) -> Self { 1u32   << index }}
-    impl BitMask for u64   { fn bit_mask(index: usize) -> Self { 1u64   << index }}
-    impl BitMask for u128  { fn bit_mask(index: usize) -> Self { 1u128  << index }}
-    impl BitMask for usize { fn bit_mask(index: usize) -> Self { 1usize << index }}
