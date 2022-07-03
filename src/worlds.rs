@@ -508,6 +508,18 @@
         } // fn with_component()
 
 
+        pub fn with_flag(mut self, flag: F) -> Self {
+
+            match self.flags.contains(&flag) {
+                true =>  { println!("The flag no.{} has been discarded as it was already registered!", self.flags.len() ) },
+                false => { self.flags.push(flag) },
+            } // match ..
+
+            self
+
+        } // fn with_flag()
+
+
         pub fn build(self) -> World<B, F, P> {
             World {
                 components:         self.components,
