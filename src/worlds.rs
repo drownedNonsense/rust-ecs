@@ -6,7 +6,7 @@
     use std::any::TypeId;
     use std::rc::Rc;
     use std::cell::RefCell;
-    use std::hash::Hash;
+    use std::ops::Range;
 
     use crate::components::{Component, ComponentCell, ComponentColumn};
     use crate::entities::{Entity, EntityBuilder, EntityId};
@@ -19,9 +19,9 @@
 // D E F I N I T I O N S
 //#######################
 
-    pub struct World<B: BitSequence, F: Flags, P: ComponentPointers> {
+    pub struct World<B: BitSequence, F: BitSequence, P: BitSequence> {
         components:         Vec<TypeId>,
-        flags:              Vec<F>,
+        flags:              HashMap<F, Range<u8>>,
         component_columns:  HashMap<B, Box<dyn ComponentColumn>>,
         component_pointers: HashMap<P, Box<dyn ComponentCell>>,
         entities:           HashMap<Entity, B>,
@@ -29,40 +29,24 @@
     } // struct World
 
 
-    pub struct WorldBuilder<B: BitSequence, F: Flags, P: ComponentPointers> {
+    pub struct WorldBuilder<B: BitSequence, F: BitSequence, P: BitSequence> {
         components:         Vec<TypeId>,
-        flags:              Vec<F>,
+        flags:              HashMap<F, Range<u8>>,
         component_count:    usize,
         component_columns:  HashMap<B, Box<dyn ComponentColumn>>,
         component_pointers: HashMap<P, Box<dyn ComponentCell>>,
     } // struct WorldBuilder
-
-
-    pub trait Flags:
-        'static
-        + Sized
-        + Eq
-        + Hash
-        + Clone + Copy {}
-
-        
-    pub trait ComponentPointers:
-        'static
-        + Sized
-        + Eq
-        + Hash
-        + Clone + Copy {}
-
+    
 
 //###############################
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<B: BitSequence, F: Flags, P: ComponentPointers> World<B, F, P> {
+    impl<B: BitSequence, F: BitSequence, P: BitSequence> World<B, F, P> {
         pub fn builder() -> WorldBuilder<B, F, P> {
             WorldBuilder {
                 components:         Vec::default(),
-                flags:              Vec::default(),
+                flags:              HashMap::default(),
                 component_count:    0usize,
                 component_columns:  HashMap::default(),
                 component_pointers: HashMap::default(),
@@ -77,7 +61,7 @@
                 .enumerate()
                 .find_map(|(index, id)| {
                     return match id == &TypeId::of::<C>() {
-                        true  => Some(B::bit_mask(index)),
+                        true  => Some(B::with_nth_bit(index)),
                         false => None,
                     } // return ..
                 }).expect("Attempted to get a component bit mask that was not registered!")
@@ -85,13 +69,15 @@
         } // fn component_bit_mask()
 
 
-        pub(crate) fn flag_bit_mask(&self, flag: F) -> B {
+        pub(crate) fn flag_bit_mask(&self, flag: F, variant: Option<B>) -> B {
             self.flags
                 .iter()
-                .enumerate()
-                .find_map(|(index, id)| {
+                .find_map(|(id, range)| {
                     return match id == &flag {
-                        true  => Some(B::bit_mask(index + self.components.len())),
+                        true => Some(match variant {
+                            Some(variant) => ((variant << range.start) & B::mask(range.clone())) << self.components.len() as u8,
+                            None          => B::mask(range.clone()),
+                        }), // => ..
                         false => None,
                     } // return ..
                 }).expect("Attempted to get a flag bit mask that was not registered!")
@@ -143,10 +129,11 @@
         pub(crate) fn add_flag_to_entity_builder(
             &mut self,
             flag:            F,
+            variant:         Option<B>,
             entity_bit_mask: &mut B,
         ) {
 
-            let bit_mask     = self.flag_bit_mask(flag);
+            let bit_mask     = self.flag_bit_mask(flag, variant);
             *entity_bit_mask |= bit_mask;
 
         } // fn add_flag_to_entity_builder()
@@ -160,6 +147,50 @@
                 .expect("Attempted to find an entity that was not registered!") & bit_mask == bit_mask
 
         } // fn entity_has_component()
+
+
+        pub fn entity_group_has_component<C: Component>(&self, entity_group: &[Entity]) -> Vec<bool> {
+
+            let bit_mask = self.component_bit_mask::<C>();
+
+            entity_group.iter()
+                .map(|entity| *self.entities
+                    .get(&entity)
+                    .expect("Attempted to find an entity that was not registered!") & bit_mask == bit_mask
+                ).collect()
+
+        } // fn entity_group_has_component()
+
+
+        pub fn entity_has_flag(
+            &self,
+            entity:  Entity,
+            flag:    F,
+            variant: Option<B>,
+        ) -> bool {
+            self.entities
+                .get(&entity)
+                .expect("Attempted to find an entity that was not registered!")
+                .with_bits(self.flag_bit_mask(flag, variant))
+        } // fn entity_has_flag()
+
+
+        pub fn entity_group_has_flag(
+            &self,
+            entity_group: &[Entity],
+            flag:         F,
+            variant:      Option<B>,
+        ) -> Vec<bool> {
+
+            let bit_mask = self.flag_bit_mask(flag, variant);
+
+            entity_group.iter()
+                .map(|entity| self.entities.get(&entity)
+                    .expect("Attempted to find an entity that was not registered!")
+                    .with_bits(bit_mask)
+                ).collect()
+
+        } // fn entity_group_has_flag()
 
 
         pub fn add_component_to_entity<C: Component>(
@@ -327,11 +358,12 @@
 
         pub fn set_entity_flag(
             &mut self,
-            entity: Entity,
-            flag:   F,
+            entity:  Entity,
+            flag:    F,
+            variant: Option<B>,
         ) {
 
-            let bit_mask = self.flag_bit_mask(flag);
+            let bit_mask = self.flag_bit_mask(flag, variant);
             *self.entities
                 .get_mut(&entity)
                 .expect("Attempted to find an entity that was not registered!") |= bit_mask;
@@ -343,25 +375,27 @@
             &mut self,
             entity_group: &[Entity],
             flag:         F,
+            variant:      Option<B>,
         ) {
 
-            let bit_mask = self.flag_bit_mask(flag);
+            let bit_mask = self.flag_bit_mask(flag, variant);
 
             entity_group
                 .iter()
                 .for_each(|entity| *self.entities
                         .get_mut(entity)
-                        .expect("Attempted to find an entity that was not registered!") |= bit_mask); // for_each()
+                        .expect("Attempted to find an entity that was not registered!") |= bit_mask);
         } // fn set_entity_group_flag()
 
 
         pub fn remove_entity_flag(
             &mut self,
-            entity: Entity,
-            flag:   F,
+            entity:  Entity,
+            flag:    F,
+            variant: Option<B>,
         ) {
 
-            let bit_mask = self.flag_bit_mask(flag);
+            let bit_mask = self.flag_bit_mask(flag, variant);
             *self.entities
                 .get_mut(&entity)
                 .expect("Attempted to find an entity that was not registered!") &= !bit_mask;
@@ -373,15 +407,16 @@
             &mut self,
             entity_group: &[Entity],
             flag:         F,
+            variant:      Option<B>,
         ) {
 
-            let bit_mask = self.flag_bit_mask(flag);
+            let bit_mask = self.flag_bit_mask(flag, variant);
 
             entity_group
                 .iter()
                 .for_each(|entity| *self.entities
                         .get_mut(entity)
-                        .expect("Attempted to find an entity that was not registered!") &= !bit_mask); // for_each()
+                        .expect("Attempted to find an entity that was not registered!") &= !bit_mask);
         } // fn set_entity_group_flag()
 
 
@@ -439,6 +474,12 @@
         } // fn delete_entity()
 
 
+        pub fn delete_entity_group(&mut self, entity_group: &[Entity]) {
+            entity_group.iter()
+                .for_each(|entity| self.delete_entity(*entity));
+        } // fn delete_entity_group()
+
+
         pub fn new_entity(&mut self) -> EntityBuilder<B, F, P> {
 
             self.next_entity_id += 1;
@@ -452,23 +493,12 @@
     } // impl World
 
 
-    impl<B: BitSequence, F: Flags, P: ComponentPointers> WorldBuilder<B, F, P> {
-        pub fn with_default_component_pointer<C: Component + Default>(mut self, id: P) -> Self {
-            
+    impl<B: BitSequence, F: BitSequence, P: BitSequence> WorldBuilder<B, F, P> {
+        pub fn with_component_pointer<C: Component, T: Into<P>>(mut self, id: T, component: C) -> Self {
+
+            let id = id.into();
             match self.component_pointers.contains_key(&id) {
-                true =>  { println!("The component pointer no.{} has been discarded as it was already registered!", self.component_pointers.len()) },
-                false => { self.component_pointers.insert(id, Box::new(Rc::new(RefCell::new(C::default())))); },
-            } // match ..
-
-            self
-
-        } // fn with_default_component_pointer()
-
-
-        pub fn with_component_pointer<C: Component>(mut self, id: P, component: C) -> Self {
-
-            match self.component_pointers.contains_key(&id) {
-                true =>  { println!("The component pointer no.{} has been discarded as it was already registered!", self.component_pointers.len()) },
+                true =>  { println!("The component pointer {:x} has been discarded as it was already registered!", id) },
                 false => { self.component_pointers.insert(id, Box::new(Rc::new(RefCell::new(component)))); },
             } // match ..
 
@@ -477,10 +507,11 @@
         } // fn with_component_pointer()
 
 
-        pub fn with_shared_component_pointer<C: Component>(mut self, id: P, component: &Rc<RefCell<C>>) -> Self {
+        pub fn with_shared_component_pointer<C: Component, T: Into<P>>(mut self, id: T, component: &Rc<RefCell<C>>) -> Self {
 
+            let id = id.into();
             match self.component_pointers.contains_key(&id) {
-                true =>  { println!("The component pointer no.{} has been discarded as it was already registered!", self.component_pointers.len()) },
+                true =>  { println!("The component pointer {:x} has been discarded as it was already registered!", id) },
                 false => { self.component_pointers.insert(id, Box::new(component.clone())); },
             } // match ..
 
@@ -496,7 +527,7 @@
                 false => {
                     self.components.push(TypeId::of::<C>());
                     self.component_columns.insert(
-                        B::bit_mask(self.component_count),
+                        B::with_nth_bit(self.component_count),
                         Box::new(HashMap::<Entity, Rc<RefCell<C>>>::new()
                     )); // insert()
                     self.component_count += 1;
@@ -508,19 +539,25 @@
         } // fn with_component()
 
 
-        pub fn with_flag(mut self, flag: F) -> Self {
+        pub fn with_flag<T: Into<F>>(mut self, flag: T, range: Range<u8>) -> Self {
 
-            match self.flags.contains(&flag) {
-                true =>  { println!("The flag no.{} has been discarded as it was already registered!", self.flags.len() ) },
-                false => { self.flags.push(flag) },
-            } // match ..
-
+            self.flags.insert(flag.into(), range);
             self
 
         } // fn with_flag()
 
 
         pub fn build(self) -> World<B, F, P> {
+
+            assert!(
+                self.component_count + usize::from(self.flags.iter()
+                    .max_by(|(_, a), (_, b)| a.start.cmp(&b.end))
+                    .unwrap()
+                    .1
+                    .end) < usize::from(B::BITS),
+                "WARNING: entity bitmask is overflowing!\n consider using a larger bit count!"
+            );
+
             World {
                 components:         self.components,
                 flags:              self.flags,

@@ -5,7 +5,7 @@
     use std::rc::Rc;
     use std::cell::RefCell;
 
-    use crate::worlds::{World, Flags, ComponentPointers};
+    use crate::worlds::World;
     use crate::components::Component;
     use crate::entities::Entity;
 
@@ -16,13 +16,13 @@
 // D E F I N I T I O N S
 //#######################
 
-    pub struct Query<'world, B: BitSequence, F: Flags, P: ComponentPointers> {
+    pub struct Query<'world, B: BitSequence, F: BitSequence, P: BitSequence> {
         entities: Vec<Entity>,
         world:    &'world World<B, F, P>,
     } // struct Query
 
 
-    pub struct QueryBuilder<'world, B: BitSequence, F: Flags, P: ComponentPointers> {
+    pub struct QueryBuilder<'world, B: BitSequence, F: BitSequence, P: BitSequence> {
         pub(crate) bit_mask: B,
         pub(crate) world:    &'world World<B, F, P>,
     } // struct QueryBuilder
@@ -32,7 +32,7 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitSequence, F: Flags, P: ComponentPointers> Query<'world, B, F, P> {
+    impl<'world, B: BitSequence, F: BitSequence, P: BitSequence> Query<'world, B, F, P> {
         pub fn get_components<C: Component>(&self) -> Vec<&Rc<RefCell<C>>> {
 
             let component_column = self.world.get_component_column::<C>();
@@ -51,7 +51,7 @@
     } // impl Query
 
 
-    impl<'world, B: BitSequence, F: Flags, P: ComponentPointers> QueryBuilder<'world, B, F, P> {
+    impl<'world, B: BitSequence, F: BitSequence, P: BitSequence> QueryBuilder<'world, B, F, P> {
         pub fn with_component<C: Component>(mut self) -> Self {
 
             self.bit_mask |= self.world.component_bit_mask::<C>();
@@ -60,9 +60,9 @@
         } // fn with_component()
 
 
-        pub fn with_flag(mut self, flag: F) -> Self {
+        pub fn with_flag<T: Into<F>>(mut self, flag: T, variant: Option<B>) -> Self {
 
-            self.bit_mask |= self.world.flag_bit_mask(flag);
+            self.bit_mask |= self.world.flag_bit_mask(flag.into(), variant);
             self
             
         } // fn with_flag()

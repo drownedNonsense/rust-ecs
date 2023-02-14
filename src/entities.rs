@@ -6,7 +6,7 @@
     use std::cell::RefCell;
     use std::hash::Hash;
 
-    use crate::worlds::{World, Flags, ComponentPointers};
+    use crate::worlds::World;
     use crate::components::Component;
 
     use rust_utils::BitSequence;
@@ -20,7 +20,7 @@
     pub struct Entity(EntityId);
 
 
-    pub struct EntityBuilder<'world, B: BitSequence, F: Flags, P: ComponentPointers> {
+    pub struct EntityBuilder<'world, B: BitSequence, F: BitSequence, P: BitSequence> {
         entity:   Entity,
         bit_mask: B,
         world:    &'world mut World<B, F, P>,
@@ -34,7 +34,7 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitSequence, F: Flags, P: ComponentPointers> EntityBuilder<'world, B, F, P> {
+    impl<'world, B: BitSequence, F: BitSequence, P: BitSequence> EntityBuilder<'world, B, F, P> {
         pub(crate) fn new(
             id:    EntityId,
             world: &'world mut World<B, F, P>
@@ -57,9 +57,13 @@
         } // fn with_shared_component()
 
 
-        pub fn with_flag(mut self, flag: F) -> Self {
+        pub fn with_flag(
+            mut self,
+            flag:    F,
+            variant: Option<B>,
+        ) -> Self {
 
-            self.world.add_flag_to_entity_builder(flag, &mut self.bit_mask);
+            self.world.add_flag_to_entity_builder(flag, variant, &mut self.bit_mask);
             self
 
         } // fn with_flag()

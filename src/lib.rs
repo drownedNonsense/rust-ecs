@@ -7,6 +7,6 @@
     pub(crate) mod entities;
     pub(crate) mod components;
 
-    pub use worlds::{World, Flags, ComponentPointers};
+    pub use worlds::{World, WorldBuilder};
     pub use entities::Entity;
     pub use components::Component;
