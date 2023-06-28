@@ -2,27 +2,29 @@
 // D E P E N D E N C I E S
 //#########################
 
+    use std::fmt::Debug;
     use std::rc::Rc;
     use std::cell::RefCell;
+    use std::hash::Hash;
 
     use crate::worlds::World;
     use crate::components::Component;
     use crate::entities::Entity;
 
-    use rust_utils::BitSequence;
+    use rusty_toolkit::BitField;
 
 
 //#######################
 // D E F I N I T I O N S
 //#######################
 
-    pub struct Query<'world, B: BitSequence, F: BitSequence, P: BitSequence> {
+    pub struct Query<'world, B: BitField, F: BitField, P: Hash + Eq + Debug> {
         entities: Vec<Entity>,
         world:    &'world World<B, F, P>,
     } // struct Query
 
 
-    pub struct QueryBuilder<'world, B: BitSequence, F: BitSequence, P: BitSequence> {
+    pub struct QueryBuilder<'world, B: BitField, F: BitField, P: Hash + Eq + Debug> {
         pub(crate) bit_mask: B,
         pub(crate) world:    &'world World<B, F, P>,
     } // struct QueryBuilder
@@ -32,7 +34,7 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitSequence, F: BitSequence, P: BitSequence> Query<'world, B, F, P> {
+    impl<'world, B: BitField, F: BitField, P: Hash + Eq + Debug> Query<'world, B, F, P> {
         pub fn get_components<C: Component>(&self) -> Vec<&Rc<RefCell<C>>> {
 
             let component_column = self.world.get_component_column::<C>();
@@ -51,7 +53,7 @@
     } // impl Query
 
 
-    impl<'world, B: BitSequence, F: BitSequence, P: BitSequence> QueryBuilder<'world, B, F, P> {
+    impl<'world, B: BitField, F: BitField, P: Hash + Eq + Debug> QueryBuilder<'world, B, F, P> {
         pub fn with_component<C: Component>(mut self) -> Self {
 
             self.bit_mask |= self.world.component_bit_mask::<C>();

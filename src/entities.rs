@@ -2,6 +2,7 @@
 // D E P E N D E N C I E S
 //#########################
 
+    use std::fmt::Debug;
     use std::rc::Rc;
     use std::cell::RefCell;
     use std::hash::Hash;
@@ -9,7 +10,7 @@
     use crate::worlds::World;
     use crate::components::Component;
 
-    use rust_utils::BitSequence;
+    use rusty_toolkit::BitField;
 
 
 //#######################
@@ -20,7 +21,7 @@
     pub struct Entity(EntityId);
 
 
-    pub struct EntityBuilder<'world, B: BitSequence, F: BitSequence, P: BitSequence> {
+    pub struct EntityBuilder<'world, B: BitField, F: BitField, P: Hash + Eq + Debug> {
         entity:   Entity,
         bit_mask: B,
         world:    &'world mut World<B, F, P>,
@@ -34,11 +35,11 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<'world, B: BitSequence, F: BitSequence, P: BitSequence> EntityBuilder<'world, B, F, P> {
+    impl<'world, B: BitField, F: BitField, P: Hash + Eq + Debug> EntityBuilder<'world, B, F, P> {
         pub(crate) fn new(
             id:    EntityId,
             world: &'world mut World<B, F, P>
-        ) -> Self { EntityBuilder { entity: Entity(id), bit_mask: B::default(), world }}
+        ) -> Self { EntityBuilder { entity: Entity(id), bit_mask: B::MIN, world }}
 
 
         pub fn with_component<C: Component>(mut self, component: C) -> Self {

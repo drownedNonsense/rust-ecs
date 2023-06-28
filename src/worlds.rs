@@ -7,19 +7,21 @@
     use std::rc::Rc;
     use std::cell::RefCell;
     use std::ops::Range;
+    use std::hash::Hash;
+    use std::fmt::Debug;
 
     use crate::components::{Component, ComponentCell, ComponentColumn};
     use crate::entities::{Entity, EntityBuilder, EntityId};
     use crate::queries::QueryBuilder;
 
-    use rust_utils::BitSequence;
+    use rusty_toolkit::BitField;
 
 
 //#######################
 // D E F I N I T I O N S
 //#######################
 
-    pub struct World<B: BitSequence, F: BitSequence, P: BitSequence> {
+    pub struct World<B: BitField, F: BitField, P: Hash + Eq + Debug> {
         components:         Vec<TypeId>,
         flags:              HashMap<F, Range<u8>>,
         component_columns:  HashMap<B, Box<dyn ComponentColumn>>,
@@ -29,7 +31,7 @@
     } // struct World
 
 
-    pub struct WorldBuilder<B: BitSequence, F: BitSequence, P: BitSequence> {
+    pub struct WorldBuilder<B: BitField, F: BitField, P: Hash + Eq + Debug> {
         components:         Vec<TypeId>,
         flags:              HashMap<F, Range<u8>>,
         component_count:    usize,
@@ -42,7 +44,7 @@
 // I M P L E M E N T A T I O N S
 //###############################
 
-    impl<B: BitSequence, F: BitSequence, P: BitSequence> World<B, F, P> {
+    impl<B: BitField, F: BitField, P: Hash + Eq + Debug> World<B, F, P> {
         pub fn builder() -> WorldBuilder<B, F, P> {
             WorldBuilder {
                 components:         Vec::default(),
@@ -61,7 +63,7 @@
                 .enumerate()
                 .find_map(|(index, id)| {
                     return match id == &TypeId::of::<C>() {
-                        true  => Some(B::with_nth_bit(index)),
+                        true  => Some(B::bit(index as u8)),
                         false => None,
                     } // return ..
                 }).expect("Attempted to get a component bit mask that was not registered!")
@@ -75,8 +77,8 @@
                 .find_map(|(id, range)| {
                     return match id == &flag {
                         true => Some(match variant {
-                            Some(variant) => ((variant << range.start) & B::mask(range.clone())) << self.components.len() as u8,
-                            None          => B::mask(range.clone()),
+                            Some(variant) => ((variant << range.start) & B::bit_mask(range.clone())) << self.components.len() as u8,
+                            None          => B::bit_mask(range.clone()),
                         }), // => ..
                         false => None,
                     } // return ..
@@ -171,7 +173,7 @@
             self.entities
                 .get(&entity)
                 .expect("Attempted to find an entity that was not registered!")
-                .with_bits(self.flag_bit_mask(flag, variant))
+                .has_bits(self.flag_bit_mask(flag, variant))
         } // fn entity_has_flag()
 
 
@@ -187,7 +189,7 @@
             entity_group.iter()
                 .map(|entity| self.entities.get(&entity)
                     .expect("Attempted to find an entity that was not registered!")
-                    .with_bits(bit_mask)
+                    .has_bits(bit_mask)
                 ).collect()
 
         } // fn entity_group_has_flag()
@@ -493,12 +495,12 @@
     } // impl World
 
 
-    impl<B: BitSequence, F: BitSequence, P: BitSequence> WorldBuilder<B, F, P> {
+    impl<B: BitField, F: BitField, P: Hash + Eq + Debug> WorldBuilder<B, F, P> {
         pub fn with_component_pointer<C: Component, T: Into<P>>(mut self, id: T, component: C) -> Self {
 
             let id = id.into();
             match self.component_pointers.contains_key(&id) {
-                true =>  { println!("The component pointer {:x} has been discarded as it was already registered!", id) },
+                true =>  { println!("The component pointer {:?} has been discarded as it was already registered!", id) },
                 false => { self.component_pointers.insert(id, Box::new(Rc::new(RefCell::new(component)))); },
             } // match ..
 
@@ -511,7 +513,7 @@
 
             let id = id.into();
             match self.component_pointers.contains_key(&id) {
-                true =>  { println!("The component pointer {:x} has been discarded as it was already registered!", id) },
+                true =>  { println!("The component pointer {:?} has been discarded as it was already registered!", id) },
                 false => { self.component_pointers.insert(id, Box::new(component.clone())); },
             } // match ..
 
@@ -527,7 +529,7 @@
                 false => {
                     self.components.push(TypeId::of::<C>());
                     self.component_columns.insert(
-                        B::with_nth_bit(self.component_count),
+                        B::bit(self.component_count as u8),
                         Box::new(HashMap::<Entity, Rc<RefCell<C>>>::new()
                     )); // insert()
                     self.component_count += 1;
@@ -550,11 +552,12 @@
         pub fn build(self) -> World<B, F, P> {
 
             assert!(
-                self.component_count + usize::from(self.flags.iter()
-                    .max_by(|(_, a), (_, b)| a.start.cmp(&b.end))
-                    .unwrap()
-                    .1
-                    .end) < usize::from(B::BITS),
+                self.component_count + usize::from(
+                    match self.flags.iter().max_by(|(_, a), (_, b)| a.start.cmp(&b.end)) {
+                        Some(max) => max.1.end,
+                        None      => 0u8,
+                    } // match ..
+                ) < usize::from(B::BITS),
                 "WARNING: entity bitmask is overflowing!\n consider using a larger bit count!"
             );
 

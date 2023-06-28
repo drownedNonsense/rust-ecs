@@ -7,4 +7,4 @@ license    = "GPL-3.0-or-later"
 readme     = "README.md"
 
 [dependencies]
-rust-utils = { path = "../rust-utils" }
+rusty-toolkit = { path = "../rusty-toolkit" }
